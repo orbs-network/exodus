@@ -181,11 +181,13 @@ github.com/orbs-network/govnr v0.2.0 h1:Txazgo4Jd29hiARXg6nMqK2pmJA85KeXR+ZjLNy9
 github.com/orbs-network/govnr v0.2.0/go.mod h1:kZctUOFclDbO3Z6w559++l4qh0FPb57XdE5IdOFCbI4=
 github.com/orbs-network/lean-helix-go v0.2.7 h1:d7k67YUIMqXihIl5x/S9p7VIpBGpBzI1D/xR1x2Y/Ro=
 github.com/orbs-network/lean-helix-go v0.2.7/go.mod h1:9E/1sZEMZvNLHrP+nif36bio2zKbCkueji4R9e7vJnI=
+github.com/orbs-network/lean-helix-go v0.3.0 h1:lN46V8I5LV7eZF0sYf8/0BBte8J+i/fl8j/fempWEAM=
 github.com/orbs-network/lean-helix-go v0.3.0/go.mod h1:9E/1sZEMZvNLHrP+nif36bio2zKbCkueji4R9e7vJnI=
 github.com/orbs-network/membuffers v0.3.2/go.mod h1:M5ABv0m0XBGoJbX+7UKVY02hLF4XhS2SlZVEVABMc6M=
 github.com/orbs-network/membuffers v0.4.0 h1:tqeCLjdXJX3JIGy2mEMroeE+vG5mWTZx1vpwz7sgQKc=
 github.com/orbs-network/membuffers v0.4.0/go.mod h1:mhOIfhkMQWKhbQbwD2BoIlV9eAA3LwZXMC0+JIrDmCM=
 github.com/orbs-network/orbs-client-sdk-go v0.14.0/go.mod h1:1KsIoX5oZrLRwi96bF6k0Dy9dZaym2H88hCDi92R2YM=
+github.com/orbs-network/orbs-client-sdk-go v0.15.0 h1:8xbbVECgupYpS+Qbrcm8FmfrAHmrkQ0o+VYhH1LnZRM=
 github.com/orbs-network/orbs-client-sdk-go v0.15.0/go.mod h1:1KsIoX5oZrLRwi96bF6k0Dy9dZaym2H88hCDi92R2YM=
 github.com/orbs-network/orbs-contract-sdk v1.4.0/go.mod h1:N+caPmVwyn3p+kgPwfb43bo4qAcRDoiaq/gw/ag1mHo=
 github.com/orbs-network/orbs-contract-sdk v1.5.0 h1:aToFZbAVMzEX4oCINRhe7exT0DkGIfC5LVT7b/+v42k=

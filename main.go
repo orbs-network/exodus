@@ -2,9 +2,10 @@ package main
 
 import (
 	"database/sql"
-	"encoding/hex"
 	"fmt"
 	dbImport "github.com/orbs-network/exodus/db"
+	"github.com/orbs-network/orbs-client-sdk-go/codec"
+	"github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/scribe/log"
@@ -53,6 +54,16 @@ func main() {
 
 	logger.Info("successfully connected to the database")
 
+	if len(os.Args) > 1 && os.Args[1] == "migrate" {
+		client := orbs.NewClient("http://localhost:8080", 42, codec.NETWORK_TYPE_TEST_NET)
+
+		if err := dbImport.Migrate(db, tableName, client, "NotaryV6"); err != nil {
+			logger.Error("failure", log.Error(err))
+		}
+
+		return
+	}
+
 	// create table NotaryV1$register (blockHeight bigint, timestamp bigint, arguments bytea, txStatus varchar, txId varchar);
 
 	if err := dbImport.Import(logger, &dbImport.BlockPersistenceConfig{
@@ -67,10 +78,11 @@ func main() {
 
 			for _, rawTx := range block.TransactionsBlock.SignedTransactions {
 				tx := rawTx.Transaction()
-				if tx.ContractName() == contractName && tx.MethodName() == methodName {
 
+				// FIXME check txReceipt
+				if tx.ContractName() == contractName && tx.MethodName() == methodName {
 					_, err := dbTx.Exec("INSERT INTO "+tableName+"(blockHeight, timestamp, arguments, txStatus, txId) VALUES ($1, $2, $3, $4, $5)",
-						blockHeight, blockTimestamp, hex.EncodeToString(tx.RawInputArgumentArray()), "", "")
+						blockHeight, blockTimestamp, tx.RawInputArgumentArrayWithHeader(), "", "")
 
 					if err != nil {
 						logger.Error("db error", log.Error(err))
