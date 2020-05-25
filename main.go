@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
+	"github.com/orbs-network/crypto-lib-go/crypto/digest"
 	dbImport "github.com/orbs-network/exodus/db"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	"github.com/orbs-network/orbs-client-sdk-go/orbs"
@@ -64,7 +67,7 @@ func main() {
 		return
 	}
 
-	// create table NotaryV1$register (blockHeight bigint, timestamp bigint, arguments bytea, txStatus varchar, txId varchar);
+	// create table NotaryV1$register (blockHeight bigint, timestamp bigint, arguments bytea, txId bytea, newTxId bytea, newTxStatus varchar);
 
 	if err := dbImport.Import(logger, &dbImport.BlockPersistenceConfig{
 		ChainId: 1970000,
@@ -78,11 +81,18 @@ func main() {
 
 			for _, rawTx := range block.TransactionsBlock.SignedTransactions {
 				tx := rawTx.Transaction()
+				txHash := digest.CalcTxHash(tx)
+				txId := digest.CalcTxId(tx)
 
 				// FIXME check txReceipt
+				if !txIsSuccessfull(txHash, block.ResultsBlock.TransactionReceipts) {
+					logger.Info("skipping tx", log.String("txId", hex.EncodeToString(txId)))
+					continue
+				}
+
 				if tx.ContractName() == contractName && tx.MethodName() == methodName {
-					_, err := dbTx.Exec("INSERT INTO "+tableName+"(blockHeight, timestamp, arguments, txStatus, txId) VALUES ($1, $2, $3, $4, $5)",
-						blockHeight, blockTimestamp, tx.RawInputArgumentArrayWithHeader(), "", "")
+					_, err := dbTx.Exec("INSERT INTO "+tableName+"(blockHeight, timestamp, arguments, txId, newTxStatus) VALUES ($1, $2, $3, $4, $5)",
+						blockHeight, blockTimestamp, tx.RawInputArgumentArrayWithHeader(), txId, "")
 
 					if err != nil {
 						logger.Error("db error", log.Error(err))
@@ -107,4 +117,14 @@ func main() {
 	} else {
 		logger.Info("success!")
 	}
+}
+
+func txIsSuccessfull(txHash []byte, receipts []*protocol.TransactionReceipt) bool {
+	for _, txReceipt := range receipts {
+		if bytes.Equal(txReceipt.Txhash(), txHash) {
+			return txReceipt.ExecutionResult() == protocol.EXECUTION_RESULT_SUCCESS
+		}
+	}
+
+	return false
 }

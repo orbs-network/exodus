@@ -12,21 +12,22 @@ var PUBLIC_KEY, _ = hex.DecodeString("B7Ef1A3E101322737416db57F7A2CC46DCc3Ae1718
 var PRIVATE_KEY, _ = hex.DecodeString("05E98d95c25815274679ff055aE49722CD5E2f888455AF392FDE2Bd3eBdB81B9B7Ef1a3E101322737416db57F7A2CC46DCC3ae171870785ca072755638d2F1Ff")
 
 func Migrate(db *sql.DB, tableName string, client *orbs.OrbsClient, contractName string) error {
-	rows, err := db.Query("SELECT * FROM "+tableName+" limit $1 offset $2", 10, 0)
+	rows, err := db.Query("SELECT * FROM "+tableName+" WHERE newTxStatus = $1 LIMIT $2 OFFSET $3", "", 10, 0)
 	if err != nil {
 		return err
 	}
 
-	//dbTx, _ := db.Begin()
+	dbTx, _ := db.Begin()
 
 	for rows.Next() {
 		var blockHeight uint64
 		var timestamp uint64
 		var rawArguments []byte
-		var txId string
-		var txStatus string
+		var txId []byte
+		var newTxIdPlaceholder []byte
+		var newTxStatusPlaceholder string
 
-		if err := rows.Scan(&blockHeight, &timestamp, &rawArguments, &txId, &txStatus); err != nil {
+		if err := rows.Scan(&blockHeight, &timestamp, &rawArguments, &txId, &newTxIdPlaceholder, &newTxStatusPlaceholder); err != nil {
 			return err
 		}
 
@@ -37,7 +38,7 @@ func Migrate(db *sql.DB, tableName string, client *orbs.OrbsClient, contractName
 
 		inputArgumentsWithTimestamp := append([]interface{}{timestamp}, inputArguments...)
 		fmt.Println(inputArgumentsWithTimestamp)
-		tx, _, err := client.CreateTransaction(PUBLIC_KEY, PRIVATE_KEY, contractName, "importData",
+		tx, newTxId, err := client.CreateTransaction(PUBLIC_KEY, PRIVATE_KEY, contractName, "importData",
 			inputArgumentsWithTimestamp...)
 		if err != nil {
 			return err
@@ -48,9 +49,14 @@ func Migrate(db *sql.DB, tableName string, client *orbs.OrbsClient, contractName
 			return err
 		}
 
-		//db.Exec("UPDATE " + tableName + "WHERE")
+		if _, err := db.Exec("UPDATE "+tableName+" SET newTxId = $1, newTxStatus = $2 WHERE txId = $3",
+			newTxId, res.TransactionStatus.String(), txId); err != nil {
+			fmt.Println(err)
+			return dbTx.Rollback()
+		}
+
 		fmt.Println(res.ExecutionResult, res.TransactionStatus, res.OutputArguments)
 	}
 
-	return nil
+	return dbTx.Commit()
 }
