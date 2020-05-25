@@ -67,7 +67,7 @@ func main() {
 		return
 	}
 
-	// create table NotaryV1$register (blockHeight bigint, timestamp bigint, arguments bytea, txId bytea, newTxId bytea, newTxStatus varchar);
+	// create table NotaryV1$register (blockHeight bigint, timestamp bigint, arguments bytea, txId varchar, newTxId varchar, newTxStatus varchar);
 
 	if err := dbImport.Import(logger, &dbImport.BlockPersistenceConfig{
 		ChainId: 1970000,
@@ -83,16 +83,17 @@ func main() {
 				tx := rawTx.Transaction()
 				txHash := digest.CalcTxHash(tx)
 				txId := digest.CalcTxId(tx)
+				txIdAsString := "0x" + hex.EncodeToString(txId)
 
 				// FIXME check txReceipt
 				if !txIsSuccessfull(txHash, block.ResultsBlock.TransactionReceipts) {
-					logger.Info("skipping tx", log.String("txId", hex.EncodeToString(txId)))
+					logger.Info("skipping tx", log.String("txId", txIdAsString))
 					continue
 				}
 
 				if tx.ContractName() == contractName && tx.MethodName() == methodName {
-					_, err := dbTx.Exec("INSERT INTO "+tableName+"(blockHeight, timestamp, arguments, txId, newTxStatus) VALUES ($1, $2, $3, $4, $5)",
-						blockHeight, blockTimestamp, tx.RawInputArgumentArrayWithHeader(), txId, "")
+					_, err := dbTx.Exec("INSERT INTO "+tableName+"(blockHeight, timestamp, arguments, txId, newTxId, newTxStatus) VALUES ($1, $2, $3, $4, $5, $6)",
+						blockHeight, blockTimestamp, tx.RawInputArgumentArrayWithHeader(), txIdAsString, "", "")
 
 					if err != nil {
 						logger.Error("db error", log.Error(err))
