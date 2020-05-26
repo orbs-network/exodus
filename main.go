@@ -1,16 +1,12 @@
 package main
 
 import (
-	"bytes"
 	"database/sql"
 	"encoding/hex"
 	"fmt"
-	"github.com/orbs-network/crypto-lib-go/crypto/digest"
 	dbImport "github.com/orbs-network/exodus/db"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	"github.com/orbs-network/orbs-client-sdk-go/orbs"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/scribe/log"
 	"os"
 
@@ -30,13 +26,8 @@ const (
 	tableName = contractName + "$" + methodName
 )
 
-type row struct {
-	blockHeight uint64
-	timestamp   uint64
-	arguments   []byte
-	txStatus    string
-	txId        string
-}
+var PUBLIC_KEY, _ = hex.DecodeString("B7Ef1A3E101322737416db57F7A2CC46DCc3Ae171870785CA072755638d2f1FF")
+var PRIVATE_KEY, _ = hex.DecodeString("05E98d95c25815274679ff055aE49722CD5E2f888455AF392FDE2Bd3eBdB81B9B7Ef1a3E101322737416db57F7A2CC46DCC3ae171870785ca072755638d2F1Ff")
 
 func main() {
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
@@ -60,7 +51,10 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "migrate" {
 		client := orbs.NewClient("http://localhost:8080", 42, codec.NETWORK_TYPE_TEST_NET)
 
-		if err := dbImport.Migrate(db, tableName, client, "NotaryV6"); err != nil {
+		if err := dbImport.Migrate(db, tableName, client, &orbs.OrbsAccount{
+			PublicKey:  PUBLIC_KEY,
+			PrivateKey: PRIVATE_KEY,
+		}, "NotaryV6"); err != nil {
 			logger.Error("failure", log.Error(err))
 		}
 
@@ -69,63 +63,16 @@ func main() {
 
 	// create table NotaryV1$register (blockHeight bigint, timestamp bigint, arguments bytea, txId varchar, newTxId varchar, newTxStatus varchar);
 
-	if err := dbImport.Import(logger, &dbImport.BlockPersistenceConfig{
+	if err := dbImport.Import(logger, db, &dbImport.ImportConfig{
+		Contract:    contractName,
+		Method:      methodName,
+		BlockHeight: 3000,
+	}, &dbImport.BlockPersistenceConfig{
 		ChainId: 1970000,
 		Dir:     "/Users/kirill/Downloads/197",
-	}, func(first primitives.BlockHeight, page []*protocol.BlockPairContainer) (wantsMore bool) {
-		dbTx, _ := db.Begin()
-
-		for _, block := range page {
-			blockHeight := uint64(block.TransactionsBlock.Header.BlockHeight())
-			blockTimestamp := uint64(block.TransactionsBlock.Header.Timestamp())
-
-			for _, rawTx := range block.TransactionsBlock.SignedTransactions {
-				tx := rawTx.Transaction()
-				txHash := digest.CalcTxHash(tx)
-				txId := digest.CalcTxId(tx)
-				txIdAsString := "0x" + hex.EncodeToString(txId)
-
-				// FIXME check txReceipt
-				if !txIsSuccessfull(txHash, block.ResultsBlock.TransactionReceipts) {
-					logger.Info("skipping tx", log.String("txId", txIdAsString))
-					continue
-				}
-
-				if tx.ContractName() == contractName && tx.MethodName() == methodName {
-					_, err := dbTx.Exec("INSERT INTO "+tableName+"(blockHeight, timestamp, arguments, txId, newTxId, newTxStatus) VALUES ($1, $2, $3, $4, $5, $6)",
-						blockHeight, blockTimestamp, tx.RawInputArgumentArrayWithHeader(), txIdAsString, "", "")
-
-					if err != nil {
-						logger.Error("db error", log.Error(err))
-						return false
-					}
-				}
-			}
-
-		}
-
-		if err := dbTx.Commit(); err != nil {
-			logger.Error("failed to commit to the db", log.Error(err))
-			return false
-		}
-
-		logger.Info("processed block range",
-			log.Uint64("start", uint64(page[0].TransactionsBlock.Header.BlockHeight())),
-			log.Uint64("end", uint64(page[len(page)-1].TransactionsBlock.Header.BlockHeight())))
-		return true
 	}); err != nil {
 		logger.Error("failed!", log.Error(err))
 	} else {
 		logger.Info("success!")
 	}
-}
-
-func txIsSuccessfull(txHash []byte, receipts []*protocol.TransactionReceipt) bool {
-	for _, txReceipt := range receipts {
-		if bytes.Equal(txReceipt.Txhash(), txHash) {
-			return txReceipt.ExecutionResult() == protocol.EXECUTION_RESULT_SUCCESS
-		}
-	}
-
-	return false
 }
