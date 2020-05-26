@@ -54,7 +54,6 @@ func Migrate(logger log.Logger, db *sql.DB, contractName string, cfg config.Orbs
 		go func(rawArguments []byte, txId string) {
 			defer wg.Done()
 
-			<-time.After(1 * time.Microsecond)
 			inputArguments, err := protocol.PackedOutputArgumentsToNatives(rawArguments)
 			if err != nil {
 				logger.Error("failed to parse tx input arguments", log.Error(err))

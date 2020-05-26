@@ -19,7 +19,7 @@ func Migrate(logger log.Logger, cfg *config.Config) error {
 
 		if err, count := db.Migrate(logger, postgres, cfg.Import.ContractName, cfg.Orbs); err != nil {
 			return err
-		} else if count == 0 {
+		} else if count == 0 { // FIXME
 			break
 		}
 

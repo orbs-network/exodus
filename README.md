@@ -11,7 +11,7 @@ docker run -d -p 5432:5432 -e POSTGRES_DB=exodus -e POSTGRES_USER=username -e PO
 Deploy sample contract:
 
 ```
-gamma-cli stop-local && gamma-cli start-local && gamma-cli deploy e2e/contract/notary.go -name NotaryV6 -signer user1
+gamma-cli stop-local && gamma-cli start-local -override-config '{"consensus-context-maximum-transactions-in-block":1000,"transaction-pool-propagation-batch-size":500,"block-sync-num-blocks-in-batch":1000}' && gamma-cli deploy e2e/contract/notary.go -name NotaryV6 -signer user1
 ```
 
 Update `config.json` file with relevant information.
