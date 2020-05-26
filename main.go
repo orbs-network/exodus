@@ -51,7 +51,7 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "migrate" {
 		client := orbs.NewClient("http://localhost:8080", 42, codec.NETWORK_TYPE_TEST_NET)
 
-		if err := dbImport.Migrate(db, tableName, client, &orbs.OrbsAccount{
+		if err, _ := dbImport.Migrate(logger, db, tableName, client, &orbs.OrbsAccount{
 			PublicKey:  PUBLIC_KEY,
 			PrivateKey: PRIVATE_KEY,
 		}, "NotaryV6"); err != nil {
@@ -63,7 +63,7 @@ func main() {
 
 	// create table NotaryV1$register (blockHeight bigint, timestamp bigint, arguments bytea, txId varchar, newTxId varchar, newTxStatus varchar);
 
-	if err := dbImport.Import(logger, db, &dbImport.ImportConfig{
+	if err, _ := dbImport.Import(logger, db, &dbImport.ImportConfig{
 		Contract:    contractName,
 		Method:      methodName,
 		BlockHeight: 3000,

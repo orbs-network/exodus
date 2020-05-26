@@ -2,10 +2,9 @@ package db
 
 import (
 	"database/sql"
-	"fmt"
-	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	"github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/scribe/log"
 	"sync"
 	"time"
 )
@@ -21,24 +20,24 @@ type txIdError struct {
 	description string
 }
 
-func Migrate(db *sql.DB, tableName string, client *orbs.OrbsClient, account *orbs.OrbsAccount, contractName string) error {
+func Migrate(logger log.Logger, db *sql.DB, tableName string, client *orbs.OrbsClient, account *orbs.OrbsAccount, contractName string) (error, int) {
 	// FIXME number of rows is not always the same as limit
 
-	limit := 200
+	limit := 100
 	offset := 0
 
 	rows, err := db.Query("SELECT timestamp, arguments, txId FROM "+tableName+" WHERE newTxStatus = $1 LIMIT $2 OFFSET $3", "", limit, offset)
 	if err != nil {
-		return err
+		return err, 0
 	}
 
 	reqStart := time.Now()
 
 	dbTx, _ := db.Begin()
 	var wg sync.WaitGroup
-	txIdPairs := make(chan txIdPair, limit)
 	errors := make(chan txIdError, limit)
 
+	var count int
 	for rows.Next() {
 		wg.Add(1)
 
@@ -47,7 +46,7 @@ func Migrate(db *sql.DB, tableName string, client *orbs.OrbsClient, account *orb
 		var txId string
 
 		if err := rows.Scan(&timestamp, &rawArguments, &txId); err != nil {
-			return err
+			return err, 0
 		}
 
 		go func(rawArguments []byte, txId string) {
@@ -64,14 +63,10 @@ func Migrate(db *sql.DB, tableName string, client *orbs.OrbsClient, account *orb
 			}
 
 			inputArgumentsWithTimestamp := append([]interface{}{timestamp}, inputArguments...)
-			fmt.Println(inputArgumentsWithTimestamp)
 			tx, newTxId, err := client.CreateTransaction(account.PublicKey, account.PrivateKey, contractName, "importData",
 				inputArgumentsWithTimestamp...)
 			if err != nil {
-				errors <- txIdError{
-					id:  txId,
-					err: err,
-				}
+				logger.Error("failed to create new transaction", log.String("txId", txId))
 				return
 			}
 			res, err := client.SendTransactionAsync(tx)
@@ -81,96 +76,26 @@ func Migrate(db *sql.DB, tableName string, client *orbs.OrbsClient, account *orb
 					description = res.OutputArguments[0].(string)
 				}
 
-				errors <- txIdError{
-					id:          txId,
-					err:         err,
-					description: description,
-				}
+				logger.Error("failed to send new transaction", log.String("txId", txId), log.Error(err), log.String("remoteError", description))
 				return
 			}
 
-			if _, err := db.Exec("UPDATE "+tableName+" SET newTxId = $1, newTxStatus = $2 WHERE txId = $3",
+			if _, err := dbTx.Exec("UPDATE "+tableName+" SET newTxId = $1, newTxStatus = $2 WHERE txId = $3",
 				newTxId, res.TransactionStatus.String(), txId); err != nil {
-				fmt.Println(err)
-				errors <- txIdError{
-					id:  txId,
-					err: err,
-				}
+				logger.Error("failed to update db", log.Error(err))
 				return
 			}
-
-			txIdPairs <- txIdPair{
-				old: txId,
-				new: newTxId,
-			}
+			count++
 		}(rawArguments, txId)
 
 	}
 
 	wg.Wait()
 
-	dbTx.Commit()
-
-	fmt.Println(time.Since(reqStart))
-
-	dbTx, _ = db.Begin()
-
-	statusStart := time.Now()
-	success := 0
-
-	totalPairs := len(txIdPairs)
-	for i := 0; i < totalPairs; i++ {
-		select {
-		case pair := <-txIdPairs:
-			wg.Add(1)
-			go func(pair txIdPair) {
-				defer wg.Done()
-
-				for {
-					<-time.After(100 * time.Millisecond)
-
-					res, err := client.GetTransactionStatus(pair.new)
-					if err == nil {
-						fmt.Println("TX STATUS:", pair.new, res.TransactionStatus)
-					}
-
-					if err != nil || res.TransactionStatus == codec.TRANSACTION_STATUS_PENDING {
-						continue
-					}
-
-					json, _ := res.MarshalJSON()
-					fmt.Println(string(json))
-
-					fmt.Println("UPDATE TO COMPLETE:", pair.new)
-
-					if _, err := db.Exec("UPDATE "+tableName+" SET newTxStatus = $1 WHERE newTxId = $2",
-						res.TransactionStatus.String(), pair.new); err != nil {
-
-						//errors <- txIdError{
-						//	id:  txId,
-						//	err: err,
-						//}
-						fmt.Println("ERR", err)
-						return
-					} else {
-						fmt.Println("BREAK", pair.new, res.TransactionStatus)
-						success++
-						break
-					}
-				}
-			}(pair)
-		}
-	}
-
-	wg.Wait()
-
-	fmt.Println(success, "/", totalPairs)
-
 	if err := dbTx.Commit(); err != nil {
-		fmt.Println("ERR", err)
+		return err, 0
 	}
 
-	fmt.Println(time.Since(statusStart))
-
-	return nil
+	logger.Info("imported tx set", log.Int("total", count), log.Stringable("duration", time.Since(reqStart)))
+	return nil, count
 }

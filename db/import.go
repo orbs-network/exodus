@@ -57,7 +57,7 @@ func (c *ImportConfig) MaxBlockHeight() primitives.BlockHeight {
 	return c.BlockHeight
 }
 
-func Import(logger log.Logger, db *sql.DB, importConfig *ImportConfig, config *BlockPersistenceConfig) error {
+func Import(logger log.Logger, db *sql.DB, importConfig *ImportConfig, config *BlockPersistenceConfig) (error, int) {
 	metricFactory := metric.NewRegistry()
 
 	start := time.Now()
@@ -65,10 +65,11 @@ func Import(logger log.Logger, db *sql.DB, importConfig *ImportConfig, config *B
 
 	logger.Info("startup time", log.String("duration", time.Since(start).String()))
 	if err != nil {
-		return err
+		return err, 0
 	}
 
-	if err := persistence.ScanBlocks(1, 255, func(first primitives.BlockHeight, page []*protocol.BlockPairContainer) (wantsMore bool) {
+	var count int
+	if persistence.ScanBlocks(1, 255, func(first primitives.BlockHeight, page []*protocol.BlockPairContainer) (wantsMore bool) {
 		dbTx, _ := db.Begin()
 
 		var maxBlockHeight primitives.BlockHeight
@@ -98,6 +99,8 @@ func Import(logger log.Logger, db *sql.DB, importConfig *ImportConfig, config *B
 						logger.Error("db error", log.Error(err))
 						return false
 					}
+
+					count++
 				}
 			}
 
@@ -114,10 +117,10 @@ func Import(logger log.Logger, db *sql.DB, importConfig *ImportConfig, config *B
 
 		return importConfig.MaxBlockHeight() > 0 && maxBlockHeight < importConfig.MaxBlockHeight()
 	}); err != nil {
-		return err
+		return err, 0
 	}
 
-	return nil
+	return nil, count
 }
 
 func txIsSuccessfull(txHash []byte, receipts []*protocol.TransactionReceipt) bool {

@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestE2E(t *testing.T) {
@@ -32,21 +33,26 @@ func TestE2E(t *testing.T) {
 	require.EqualValues(t, 0, h.dbCountTransactions(t, dbConfig.TableName(), "PENDING"))
 	require.EqualValues(t, 0, h.dbCountTransactions(t, dbConfig.TableName(), "COMMITTED"))
 
-	err := db.Import(logger, postgres, dbConfig, &db.BlockPersistenceConfig{
+	err, importedTxCount := db.Import(logger, postgres, dbConfig, &db.BlockPersistenceConfig{
 		ChainId: 1970000,
 		Dir:     "/Users/kirill/Downloads/197",
 	})
+	require.NoError(t, err)
+	require.Greater(t, importedTxCount, 0)
 
 	txCount := h.dbCountTransactions(t, dbConfig.TableName(), "")
-	require.Greater(t, txCount, 0)
-
-	require.NoError(t, err)
+	require.EqualValues(t, txCount, importedTxCount)
 
 	client := orbs.NewClient("http://localhost:8080", 42, codec.NETWORK_TYPE_TEST_NET)
-	err = db.Migrate(postgres, dbConfig.TableName(), client, account, h.contractName)
+	err, migratedTxCount := db.Migrate(logger, postgres, dbConfig.TableName(), client, account, h.contractName)
 	require.NoError(t, err)
 
-	require.EqualValues(t, 0, h.dbCountTransactions(t, dbConfig.TableName(), ""))
+	require.EqualValues(t, migratedTxCount, h.dbCountTransactions(t, dbConfig.TableName(), "PENDING"))
+	require.EqualValues(t, 0, h.dbCountTransactions(t, dbConfig.TableName(), "COMMITTED"))
+
+	err = db.UpdateTxStatus(logger, postgres, dbConfig.TableName(), client, 300*time.Millisecond)
+	require.NoError(t, err)
+
 	require.EqualValues(t, 0, h.dbCountTransactions(t, dbConfig.TableName(), "PENDING"))
-	require.EqualValues(t, txCount, h.dbCountTransactions(t, dbConfig.TableName(), "COMMITTED"))
+	require.EqualValues(t, migratedTxCount, h.dbCountTransactions(t, dbConfig.TableName(), "COMMITTED"))
 }
