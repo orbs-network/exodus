@@ -15,7 +15,7 @@ import (
 )
 
 func Import(logger log.Logger, db *sql.DB, importConfig *config.ImportConfig) (error, int) {
-	_, err := db.Exec("CREATE TABLE IF NOT EXISTS " + importConfig.TableName() + " (blockHeight bigint, timestamp bigint, arguments bytea, txId varchar, newTxId varchar, newTxStatus varchar)")
+	_, err := db.Exec("CREATE TABLE IF NOT EXISTS " + importConfig.ContractName + " (blockHeight bigint, timestamp bigint, methodName varchar, arguments bytea, txId varchar, newTxId varchar, newTxStatus varchar)")
 	if err != nil {
 		return err, 0
 	}
@@ -53,9 +53,9 @@ func Import(logger log.Logger, db *sql.DB, importConfig *config.ImportConfig) (e
 					continue
 				}
 
-				if tx.ContractName() == importConfig.ContractName() && tx.MethodName() == importConfig.MethodName() {
-					_, err := dbTx.Exec("INSERT INTO "+importConfig.TableName()+"(blockHeight, timestamp, arguments, txId, newTxId, newTxStatus) VALUES ($1, $2, $3, $4, $5, $6)",
-						blockHeight, blockTimestamp, tx.RawInputArgumentArrayWithHeader(), txIdAsString, "", "")
+				if tx.ContractName() == primitives.ContractName(importConfig.ContractName) {
+					_, err := dbTx.Exec("INSERT INTO "+importConfig.ContractName+"(blockHeight, timestamp, methodName, arguments, txId, newTxId, newTxStatus) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+						blockHeight, blockTimestamp, tx.MethodName(), tx.RawInputArgumentArrayWithHeader(), txIdAsString, "", "")
 
 					if err != nil {
 						logger.Error("db error", log.Error(err))
@@ -77,7 +77,7 @@ func Import(logger log.Logger, db *sql.DB, importConfig *config.ImportConfig) (e
 			log.Uint64("start", uint64(page[0].TransactionsBlock.Header.BlockHeight())),
 			log.Uint64("end", uint64(page[len(page)-1].TransactionsBlock.Header.BlockHeight())))
 
-		return importConfig.MaxBlockHeight() > 0 && maxBlockHeight < importConfig.MaxBlockHeight()
+		return importConfig.BlockHeight > 0 && maxBlockHeight < importConfig.BlockHeight
 	}); err != nil {
 		return err, 0
 	}

@@ -4,9 +4,12 @@
     "VirtualChain": 42,
     "PublicKey": "0xB7Ef1A3E101322737416db57F7A2CC46DCc3Ae171870785CA072755638d2f1FF",
     "PrivateKey": "0x05E98d95c25815274679ff055aE49722CD5E2f888455AF392FDE2Bd3eBdB81B9B7Ef1a3E101322737416db57F7A2CC46DCC3ae171870785ca072755638d2F1Ff",
-    "Contract": "NotaryV6",
+    "ContractName": "NotaryV6",
     "TransactionStatusQueryIntervalInMs": 500,
-    "TransactionBatchSize": 100
+    "TransactionBatchSize": 100,
+    "ContractImportMethodMapping": {
+      "register": "importData"
+    }
   },
   "Database": {
     "Database": "exodus",
@@ -16,8 +19,7 @@
     "Password": "password"
   },
   "Import": {
-    "Contract": "NotaryV1",
-    "Method": "register",
+    "ContractName": "NotaryV1",
     "BlockHeight": 3000,
     "BlockPersistence": {
       "VirtualChain": 1970000,

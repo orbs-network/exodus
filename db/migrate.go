@@ -28,7 +28,7 @@ func Migrate(logger log.Logger, db *sql.DB, tableName string, cfg config.OrbsCli
 
 	client := cfg.Client()
 
-	rows, err := db.Query("SELECT timestamp, arguments, txId FROM "+tableName+" WHERE newTxStatus = $1 LIMIT $2", "", cfg.TransactionBatchSize)
+	rows, err := db.Query("SELECT timestamp, methodName, arguments, txId FROM "+tableName+" WHERE newTxStatus = $1 LIMIT $2", "", cfg.TransactionBatchSize)
 	if err != nil {
 		return err, 0
 	}
@@ -43,10 +43,11 @@ func Migrate(logger log.Logger, db *sql.DB, tableName string, cfg config.OrbsCli
 		wg.Add(1)
 
 		var timestamp uint64
+		var methodName string
 		var rawArguments []byte
 		var txId string
 
-		if err := rows.Scan(&timestamp, &rawArguments, &txId); err != nil {
+		if err := rows.Scan(&timestamp, &methodName, &rawArguments, &txId); err != nil {
 			return err, 0
 		}
 
@@ -61,7 +62,8 @@ func Migrate(logger log.Logger, db *sql.DB, tableName string, cfg config.OrbsCli
 			}
 
 			inputArgumentsWithTimestamp := append([]interface{}{timestamp}, inputArguments...)
-			tx, newTxId, err := client.CreateTransaction(account.PublicKey, account.PrivateKey, cfg.Contract, "importData",
+			importMethodName := cfg.ContractImportMethodMapping[methodName]
+			tx, newTxId, err := client.CreateTransaction(account.PublicKey, account.PrivateKey, cfg.ContractName, importMethodName,
 				inputArgumentsWithTimestamp...)
 			if err != nil {
 				logger.Error("failed to create new transaction", log.String("txId", txId))

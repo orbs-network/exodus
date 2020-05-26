@@ -31,7 +31,7 @@ func newHarness(t *testing.T, cfg *config.Config) *harness {
 		client:       client,
 		account:      account,
 		db:           db,
-		contractName: cfg.Orbs.Contract,
+		contractName: cfg.Orbs.ContractName,
 	}
 }
 

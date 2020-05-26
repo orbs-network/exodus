@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/exodus/config"
 	"github.com/orbs-network/scribe/log"
 	"os"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -19,7 +20,7 @@ func main() {
 	}
 
 	if len(os.Args) > 1 {
-
+		start := time.Now()
 		switch os.Args[1] {
 		case "import":
 			err = actions.Import(logger, cfg)
@@ -28,7 +29,13 @@ func main() {
 		}
 
 		if err != nil {
-			logger.Error("failure", log.Error(err))
+			logger.Error("failure", log.Error(err), log.Stringable("duration", time.Since(start)))
+			os.Exit(1)
 		}
+
+		logger.Info("success", log.Error(err), log.Stringable("duration", time.Since(start)))
+	} else {
+		logger.Error("please enter a valid command")
+		os.Exit(1)
 	}
 }

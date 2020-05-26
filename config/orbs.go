@@ -13,7 +13,8 @@ type OrbsClientConfig struct {
 	PublicKey  string
 	PrivateKey string
 
-	Contract string
+	ContractName                string
+	ContractImportMethodMapping map[string]string
 
 	TransactionStatusQueryIntervalInMs int
 	TransactionBatchSize               int
