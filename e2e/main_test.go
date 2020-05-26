@@ -1,6 +1,8 @@
 package e2e
 
 import (
+	"fmt"
+	"github.com/orbs-network/exodus/config"
 	"github.com/orbs-network/exodus/db"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	"github.com/orbs-network/orbs-client-sdk-go/orbs"
@@ -12,43 +14,59 @@ import (
 )
 
 func TestE2E(t *testing.T) {
-	h := newHarness()
+	cfg := &config.Config{
+		Orbs: config.OrbsClientConfig{
+			Endpoint:     "http://localhost:8080",
+			VirtualChain: 42,
+			PublicKey:    "0xB7Ef1A3E101322737416db57F7A2CC46DCc3Ae171870785CA072755638d2f1FF",
+			PrivateKey:   "0x05E98d95c25815274679ff055aE49722CD5E2f888455AF392FDE2Bd3eBdB81B9B7Ef1a3E101322737416db57F7A2CC46DCC3ae171870785ca072755638d2F1Ff",
+			Contract:     fmt.Sprintf("NotaryV%d", time.Now().UnixNano()),
+		},
+		Database: config.DatabaseConfig{
+			Database: "exodus",
+			Host:     "localhost",
+			Port:     5432,
+			User:     "username",
+			Password: "password",
+		},
+		Import: config.ImportConfig{
+			Contract:    "NotaryV1",
+			Method:      "register",
+			BlockHeight: 3000,
+			BlockPersistence: config.BlockPersistenceConfig{
+				VirtualChain: 1970000,
+				Dir:          "/Users/kirill/Downloads/197",
+			},
+		},
+	}
 
-	account, _ := orbs.CreateAccount()
-	h.deployContract(t, account)
+	h := newHarness(t, cfg)
+	defer h.db.Close()
+
+	h.deployContract(t)
 
 	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 
-	postgres := h.dbConnect(t)
+	tableName := cfg.Import.TableName()
+	h.dbTruncate(t, tableName)
 
-	dbConfig := &db.ImportConfig{
-		Contract:    "NotaryV1",
-		Method:      "register",
-		BlockHeight: 3000,
-	}
-
-	h.dbTruncate(t, dbConfig.TableName())
-
-	err, importedTxCount := db.Import(logger, postgres, dbConfig, &db.BlockPersistenceConfig{
-		ChainId: 1970000,
-		Dir:     "/Users/kirill/Downloads/197",
-	})
+	err, importedTxCount := db.Import(logger, h.db, &cfg.Import)
 	require.NoError(t, err)
 	require.Greater(t, importedTxCount, 0)
 
-	txCount := h.dbCountTransactions(t, dbConfig.TableName(), "")
+	txCount := h.dbCountTransactions(t, tableName, "")
 	require.EqualValues(t, txCount, importedTxCount)
 
 	client := orbs.NewClient("http://localhost:8080", 42, codec.NETWORK_TYPE_TEST_NET)
-	err, migratedTxCount := db.Migrate(logger, postgres, dbConfig.TableName(), client, account, h.contractName)
+	err, migratedTxCount := db.Migrate(logger, h.db, tableName, client, h.account, h.contractName)
 	require.NoError(t, err)
 
-	require.EqualValues(t, migratedTxCount, h.dbCountTransactions(t, dbConfig.TableName(), "PENDING"))
-	require.EqualValues(t, 0, h.dbCountTransactions(t, dbConfig.TableName(), "COMMITTED"))
+	require.EqualValues(t, migratedTxCount, h.dbCountTransactions(t, tableName, "PENDING"))
+	require.EqualValues(t, 0, h.dbCountTransactions(t, tableName, "COMMITTED"))
 
-	err = db.UpdateTxStatus(logger, postgres, dbConfig.TableName(), client, 300*time.Millisecond)
+	err = db.UpdateTxStatus(logger, h.db, tableName, client, 300*time.Millisecond)
 	require.NoError(t, err)
 
-	require.EqualValues(t, 0, h.dbCountTransactions(t, dbConfig.TableName(), "PENDING"))
-	require.EqualValues(t, migratedTxCount, h.dbCountTransactions(t, dbConfig.TableName(), "COMMITTED"))
+	require.EqualValues(t, 0, h.dbCountTransactions(t, tableName, "PENDING"))
+	require.EqualValues(t, migratedTxCount, h.dbCountTransactions(t, tableName, "COMMITTED"))
 }

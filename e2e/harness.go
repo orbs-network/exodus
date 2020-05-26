@@ -2,36 +2,44 @@ package e2e
 
 import (
 	"database/sql"
-	"fmt"
+	_ "github.com/lib/pq"
+	"github.com/orbs-network/exodus/config"
+	"github.com/orbs-network/exodus/db"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	"github.com/orbs-network/orbs-client-sdk-go/orbs"
-	"github.com/orbs-network/orbs-contract-sdk/go/examples/test"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"testing"
-	"time"
-
-	_ "github.com/lib/pq"
 )
 
 type harness struct {
 	client       *orbs.OrbsClient
+	account      *orbs.OrbsAccount
 	contractName string
 	db           *sql.DB
 }
 
-func newHarness() *harness {
+func newHarness(t *testing.T, cfg *config.Config) *harness {
+	db, err := db.LocalConnection(cfg.Database.ConnectionString())
+	require.NoError(t, err)
+
+	client := cfg.Orbs.Client()
+	account, err := cfg.Orbs.Account()
+	require.NoError(t, err)
+
 	return &harness{
-		client:       orbs.NewClient(test.GetGammaEndpoint(), 42, codec.NETWORK_TYPE_TEST_NET),
-		contractName: fmt.Sprintf("NotaryV%d", time.Now().UnixNano()),
+		client:       client,
+		account:      account,
+		db:           db,
+		contractName: cfg.Orbs.Contract,
 	}
 }
 
-func (h *harness) deployContract(t *testing.T, sender *orbs.OrbsAccount) {
+func (h *harness) deployContract(t *testing.T) {
 	contractSource, err := ioutil.ReadFile("./contract/notary.go")
 	require.NoError(t, err)
 
-	deployTx, _, err := h.client.CreateDeployTransaction(sender.PublicKey, sender.PrivateKey,
+	deployTx, _, err := h.client.CreateDeployTransaction(h.account.PublicKey, h.account.PrivateKey,
 		h.contractName, orbs.PROCESSOR_TYPE_NATIVE, contractSource)
 	require.NoError(t, err)
 
@@ -39,19 +47,6 @@ func (h *harness) deployContract(t *testing.T, sender *orbs.OrbsAccount) {
 	require.NoError(t, err)
 
 	require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS, deployResponse.ExecutionResult)
-}
-
-func (h *harness) dbConnect(t *testing.T) *sql.DB {
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
-		"password=%s dbname=%s sslmode=disable",
-		"localhost", 5432, "username", "password", "exodus")
-
-	db, err := sql.Open("postgres", psqlInfo)
-	require.NoError(t, err)
-
-	h.db = db
-
-	return db
 }
 
 func (h *harness) dbTruncate(t *testing.T, tableName string) {

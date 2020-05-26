@@ -12,6 +12,8 @@ type OrbsClientConfig struct {
 
 	PublicKey  string
 	PrivateKey string
+
+	Contract string
 }
 
 func (c OrbsClientConfig) Account() (*orbs.OrbsAccount, error) {

@@ -25,7 +25,7 @@ func Migrate(logger log.Logger, cfg *config.Config) error {
 	for {
 		start := time.Now()
 
-		if err, count := db.Migrate(logger, postgres, cfg.Import.TableName(), client, account, "NotaryV6"); err != nil {
+		if err, count := db.Migrate(logger, postgres, cfg.Import.TableName(), client, account, cfg.Orbs.Contract); err != nil {
 			return err
 		} else if count == 0 {
 			break
