@@ -34,12 +34,10 @@ func Import(logger log.Logger, db *sql.DB, importConfig *config.ImportConfig) (e
 	if persistence.ScanBlocks(1, 255, func(first primitives.BlockHeight, page []*protocol.BlockPairContainer) (wantsMore bool) {
 		dbTx, _ := db.Begin()
 
-		var maxBlockHeight primitives.BlockHeight
+		wantsMore = true
 		for _, block := range page {
 			blockHeight := uint64(block.TransactionsBlock.Header.BlockHeight())
 			blockTimestamp := uint64(block.TransactionsBlock.Header.Timestamp())
-
-			maxBlockHeight = primitives.BlockHeight(blockHeight)
 
 			for _, rawTx := range block.TransactionsBlock.SignedTransactions {
 				tx := rawTx.Transaction()
@@ -66,6 +64,10 @@ func Import(logger log.Logger, db *sql.DB, importConfig *config.ImportConfig) (e
 				}
 			}
 
+			if importConfig.BlockHeight > 0 && primitives.BlockHeight(blockHeight) == importConfig.BlockHeight {
+				wantsMore = false
+				break
+			}
 		}
 
 		if err := dbTx.Commit(); err != nil {
@@ -77,7 +79,7 @@ func Import(logger log.Logger, db *sql.DB, importConfig *config.ImportConfig) (e
 			log.Uint64("start", uint64(page[0].TransactionsBlock.Header.BlockHeight())),
 			log.Uint64("end", uint64(page[len(page)-1].TransactionsBlock.Header.BlockHeight())))
 
-		return importConfig.BlockHeight > 0 && maxBlockHeight < importConfig.BlockHeight
+		return true
 	}); err != nil {
 		return err, 0
 	}
