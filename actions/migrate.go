@@ -17,13 +17,13 @@ func Migrate(logger log.Logger, cfg *config.Config) error {
 	for {
 		start := time.Now()
 
-		if err, count := db.Migrate(logger, postgres, cfg.Import.TableName(), cfg.Orbs); err != nil {
+		if err, count := db.Migrate(logger, postgres, cfg.Import.ContractName, cfg.Orbs); err != nil {
 			return err
 		} else if count == 0 {
 			break
 		}
 
-		if err := db.UpdateTxStatus(logger, postgres, cfg.Import.TableName(), cfg.Orbs); err != nil {
+		if err := db.UpdateTxStatus(logger, postgres, cfg.Import.ContractName, cfg.Orbs); err != nil {
 			return err
 		}
 

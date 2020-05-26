@@ -9,9 +9,9 @@ import (
 	"time"
 )
 
-func UpdateTxStatus(logger log.Logger, db *sql.DB, tableName string, cfg config.OrbsClientConfig) error {
+func UpdateTxStatus(logger log.Logger, db *sql.DB, contractName string, cfg config.OrbsClientConfig) error {
 	client := cfg.Client()
-	rows, err := db.Query("SELECT txId, newTxId FROM "+tableName+" WHERE newTxStatus = $1 LIMIT $2", "PENDING", cfg.TransactionBatchSize)
+	rows, err := db.Query("SELECT txId, newTxId FROM "+contractName+" WHERE newTxStatus = $1 LIMIT $2", "PENDING", cfg.TransactionBatchSize)
 	if err != nil {
 		return err
 	}
@@ -49,7 +49,7 @@ func UpdateTxStatus(logger log.Logger, db *sql.DB, tableName string, cfg config.
 					continue
 				}
 
-				if _, err := dbTx.Exec("UPDATE "+tableName+" SET newTxStatus = $1 WHERE newTxId = $2",
+				if _, err := dbTx.Exec("UPDATE "+contractName+" SET newTxStatus = $1 WHERE newTxId = $2",
 					res.TransactionStatus.String(), pair.new); err != nil {
 
 					logger.Error("failed to update db", log.Error(err))

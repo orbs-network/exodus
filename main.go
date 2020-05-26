@@ -33,7 +33,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		logger.Info("success", log.Error(err), log.Stringable("duration", time.Since(start)))
+		logger.Info("success", log.Stringable("duration", time.Since(start)))
 	} else {
 		logger.Error("please enter a valid command")
 		os.Exit(1)

@@ -20,7 +20,7 @@ type txIdError struct {
 	description string
 }
 
-func Migrate(logger log.Logger, db *sql.DB, tableName string, cfg config.OrbsClientConfig) (error, int) {
+func Migrate(logger log.Logger, db *sql.DB, contractName string, cfg config.OrbsClientConfig) (error, int) {
 	account, err := cfg.Account()
 	if err != nil {
 		return err, 0
@@ -28,7 +28,7 @@ func Migrate(logger log.Logger, db *sql.DB, tableName string, cfg config.OrbsCli
 
 	client := cfg.Client()
 
-	rows, err := db.Query("SELECT timestamp, methodName, arguments, txId FROM "+tableName+" WHERE newTxStatus = $1 LIMIT $2", "", cfg.TransactionBatchSize)
+	rows, err := db.Query("SELECT timestamp, methodName, arguments, txId FROM "+contractName+" WHERE newTxStatus = $1 LIMIT $2", "", cfg.TransactionBatchSize)
 	if err != nil {
 		return err, 0
 	}
@@ -80,7 +80,7 @@ func Migrate(logger log.Logger, db *sql.DB, tableName string, cfg config.OrbsCli
 				return
 			}
 
-			if _, err := dbTx.Exec("UPDATE "+tableName+" SET newTxId = $1, newTxStatus = $2 WHERE txId = $3",
+			if _, err := dbTx.Exec("UPDATE "+contractName+" SET newTxId = $1, newTxStatus = $2 WHERE txId = $3",
 				newTxId, res.TransactionStatus.String(), txId); err != nil {
 				logger.Error("failed to update db", log.Error(err))
 				return
