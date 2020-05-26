@@ -29,10 +29,6 @@ func TestE2E(t *testing.T) {
 
 	h.dbTruncate(t, dbConfig.TableName())
 
-	require.EqualValues(t, 0, h.dbCountTransactions(t, dbConfig.TableName(), ""))
-	require.EqualValues(t, 0, h.dbCountTransactions(t, dbConfig.TableName(), "PENDING"))
-	require.EqualValues(t, 0, h.dbCountTransactions(t, dbConfig.TableName(), "COMMITTED"))
-
 	err, importedTxCount := db.Import(logger, postgres, dbConfig, &db.BlockPersistenceConfig{
 		ChainId: 1970000,
 		Dir:     "/Users/kirill/Downloads/197",

@@ -58,6 +58,11 @@ func (c *ImportConfig) MaxBlockHeight() primitives.BlockHeight {
 }
 
 func Import(logger log.Logger, db *sql.DB, importConfig *ImportConfig, config *BlockPersistenceConfig) (error, int) {
+	_, err := db.Exec("CREATE TABLE IF NOT EXISTS " + importConfig.TableName() + " (blockHeight bigint, timestamp bigint, arguments bytea, txId varchar, newTxId varchar, newTxStatus varchar)")
+	if err != nil {
+		return err, 0
+	}
+
 	metricFactory := metric.NewRegistry()
 
 	start := time.Now()

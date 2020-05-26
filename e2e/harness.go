@@ -55,8 +55,7 @@ func (h *harness) dbConnect(t *testing.T) *sql.DB {
 }
 
 func (h *harness) dbTruncate(t *testing.T, tableName string) {
-	_, err := h.db.Exec("TRUNCATE " + tableName)
-	require.NoError(t, err)
+	h.db.Exec("TRUNCATE " + tableName)
 }
 
 func (h *harness) dbCountTransactions(t *testing.T, tableName string, status string) (count int) {

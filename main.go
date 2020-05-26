@@ -45,7 +45,6 @@ func main() {
 	}
 
 	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
-
 	logger.Info("successfully connected to the database")
 
 	if len(os.Args) > 1 && os.Args[1] == "migrate" {
@@ -60,8 +59,6 @@ func main() {
 
 		return
 	}
-
-	// create table NotaryV1$register (blockHeight bigint, timestamp bigint, arguments bytea, txId varchar, newTxId varchar, newTxStatus varchar);
 
 	if err, _ := dbImport.Import(logger, db, &dbImport.ImportConfig{
 		Contract:    contractName,
