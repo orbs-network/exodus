@@ -2,7 +2,7 @@ package db
 
 import (
 	"database/sql"
-	"github.com/orbs-network/orbs-client-sdk-go/orbs"
+	"github.com/orbs-network/exodus/config"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/scribe/log"
 	"sync"
@@ -20,13 +20,15 @@ type txIdError struct {
 	description string
 }
 
-func Migrate(logger log.Logger, db *sql.DB, tableName string, client *orbs.OrbsClient, account *orbs.OrbsAccount, contractName string) (error, int) {
-	// FIXME number of rows is not always the same as limit
+func Migrate(logger log.Logger, db *sql.DB, tableName string, cfg config.OrbsClientConfig) (error, int) {
+	account, err := cfg.Account()
+	if err != nil {
+		return err, 0
+	}
 
-	limit := 100
-	offset := 0
+	client := cfg.Client()
 
-	rows, err := db.Query("SELECT timestamp, arguments, txId FROM "+tableName+" WHERE newTxStatus = $1 LIMIT $2 OFFSET $3", "", limit, offset)
+	rows, err := db.Query("SELECT timestamp, arguments, txId FROM "+tableName+" WHERE newTxStatus = $1 LIMIT $2", "", cfg.TransactionBatchSize)
 	if err != nil {
 		return err, 0
 	}
@@ -35,7 +37,6 @@ func Migrate(logger log.Logger, db *sql.DB, tableName string, client *orbs.OrbsC
 
 	dbTx, _ := db.Begin()
 	var wg sync.WaitGroup
-	errors := make(chan txIdError, limit)
 
 	var count int
 	for rows.Next() {
@@ -55,15 +56,12 @@ func Migrate(logger log.Logger, db *sql.DB, tableName string, client *orbs.OrbsC
 			<-time.After(1 * time.Microsecond)
 			inputArguments, err := protocol.PackedOutputArgumentsToNatives(rawArguments)
 			if err != nil {
-				errors <- txIdError{
-					id:  txId,
-					err: err,
-				}
+				logger.Error("failed to parse tx input arguments", log.Error(err))
 				return
 			}
 
 			inputArgumentsWithTimestamp := append([]interface{}{timestamp}, inputArguments...)
-			tx, newTxId, err := client.CreateTransaction(account.PublicKey, account.PrivateKey, contractName, "importData",
+			tx, newTxId, err := client.CreateTransaction(account.PublicKey, account.PrivateKey, cfg.Contract, "importData",
 				inputArgumentsWithTimestamp...)
 			if err != nil {
 				logger.Error("failed to create new transaction", log.String("txId", txId))

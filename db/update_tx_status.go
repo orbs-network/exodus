@@ -2,20 +2,16 @@ package db
 
 import (
 	"database/sql"
+	"github.com/orbs-network/exodus/config"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
-	"github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/scribe/log"
 	"sync"
 	"time"
 )
 
-func UpdateTxStatus(logger log.Logger, db *sql.DB, tableName string, client *orbs.OrbsClient, interval time.Duration) error {
-	// FIXME number of rows is not always the same as limit
-
-	limit := 100
-	offset := 0
-
-	rows, err := db.Query("SELECT txId, newTxId FROM "+tableName+" WHERE newTxStatus = $1 LIMIT $2 OFFSET $3", "PENDING", limit, offset)
+func UpdateTxStatus(logger log.Logger, db *sql.DB, tableName string, cfg config.OrbsClientConfig) error {
+	client := cfg.Client()
+	rows, err := db.Query("SELECT txId, newTxId FROM "+tableName+" WHERE newTxStatus = $1 LIMIT $2", "PENDING", cfg.TransactionBatchSize)
 	if err != nil {
 		return err
 	}
@@ -46,7 +42,7 @@ func UpdateTxStatus(logger log.Logger, db *sql.DB, tableName string, client *orb
 			defer wg.Done()
 
 			for {
-				<-time.After(interval)
+				<-time.After(time.Duration(cfg.TransactionStatusQueryIntervalInMs) * time.Millisecond)
 
 				res, err := client.GetTransactionStatus(pair.new)
 				if err != nil || res.TransactionStatus == codec.TRANSACTION_STATUS_PENDING {

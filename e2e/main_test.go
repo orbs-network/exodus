@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"github.com/orbs-network/exodus/config"
 	"github.com/orbs-network/exodus/db"
-	"github.com/orbs-network/orbs-client-sdk-go/codec"
-	"github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"os"
@@ -16,11 +14,13 @@ import (
 func TestE2E(t *testing.T) {
 	cfg := &config.Config{
 		Orbs: config.OrbsClientConfig{
-			Endpoint:     "http://localhost:8080",
-			VirtualChain: 42,
-			PublicKey:    "0xB7Ef1A3E101322737416db57F7A2CC46DCc3Ae171870785CA072755638d2f1FF",
-			PrivateKey:   "0x05E98d95c25815274679ff055aE49722CD5E2f888455AF392FDE2Bd3eBdB81B9B7Ef1a3E101322737416db57F7A2CC46DCC3ae171870785ca072755638d2F1Ff",
-			Contract:     fmt.Sprintf("NotaryV%d", time.Now().UnixNano()),
+			Endpoint:                           "http://localhost:8080",
+			VirtualChain:                       42,
+			PublicKey:                          "0xB7Ef1A3E101322737416db57F7A2CC46DCc3Ae171870785CA072755638d2f1FF",
+			PrivateKey:                         "0x05E98d95c25815274679ff055aE49722CD5E2f888455AF392FDE2Bd3eBdB81B9B7Ef1a3E101322737416db57F7A2CC46DCC3ae171870785ca072755638d2F1Ff",
+			Contract:                           fmt.Sprintf("NotaryV%d", time.Now().UnixNano()),
+			TransactionBatchSize:               100,
+			TransactionStatusQueryIntervalInMs: 300,
 		},
 		Database: config.DatabaseConfig{
 			Database: "exodus",
@@ -57,14 +57,13 @@ func TestE2E(t *testing.T) {
 	txCount := h.dbCountTransactions(t, tableName, "")
 	require.EqualValues(t, txCount, importedTxCount)
 
-	client := orbs.NewClient("http://localhost:8080", 42, codec.NETWORK_TYPE_TEST_NET)
-	err, migratedTxCount := db.Migrate(logger, h.db, tableName, client, h.account, h.contractName)
+	err, migratedTxCount := db.Migrate(logger, h.db, tableName, cfg.Orbs)
 	require.NoError(t, err)
 
 	require.EqualValues(t, migratedTxCount, h.dbCountTransactions(t, tableName, "PENDING"))
 	require.EqualValues(t, 0, h.dbCountTransactions(t, tableName, "COMMITTED"))
 
-	err = db.UpdateTxStatus(logger, h.db, tableName, client, 300*time.Millisecond)
+	err = db.UpdateTxStatus(logger, h.db, tableName, cfg.Orbs)
 	require.NoError(t, err)
 
 	require.EqualValues(t, 0, h.dbCountTransactions(t, tableName, "PENDING"))

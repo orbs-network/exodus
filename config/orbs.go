@@ -14,6 +14,9 @@ type OrbsClientConfig struct {
 	PrivateKey string
 
 	Contract string
+
+	TransactionStatusQueryIntervalInMs int
+	TransactionBatchSize               int
 }
 
 func (c OrbsClientConfig) Account() (*orbs.OrbsAccount, error) {
