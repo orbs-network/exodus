@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"github.com/orbs-network/crypto-lib-go/crypto/digest"
+	"github.com/orbs-network/exodus/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/filesystem"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -13,51 +14,7 @@ import (
 	"time"
 )
 
-type BlockPersistenceConfig struct {
-	Dir     string
-	ChainId primitives.VirtualChainId
-}
-
-func (l *BlockPersistenceConfig) BlockStorageFileSystemDataDir() string {
-	return l.Dir
-}
-
-func (l *BlockPersistenceConfig) BlockStorageFileSystemMaxBlockSizeInBytes() uint32 {
-	return 64 * 1024 * 1024
-}
-
-func (l *BlockPersistenceConfig) VirtualChainId() primitives.VirtualChainId {
-	return l.ChainId
-}
-
-func (l *BlockPersistenceConfig) NetworkType() protocol.SignerNetworkType {
-	return protocol.SignerNetworkType(0)
-}
-
-type ImportConfig struct {
-	Contract    string
-	Method      string
-	BlockHeight primitives.BlockHeight // FIXME add min block height
-	// FIXME add successful only
-}
-
-func (c *ImportConfig) TableName() string {
-	return c.Contract + "$" + c.Method
-}
-
-func (c *ImportConfig) ContractName() primitives.ContractName {
-	return primitives.ContractName(c.Contract)
-}
-
-func (c *ImportConfig) MethodName() primitives.MethodName {
-	return primitives.MethodName(c.Method)
-}
-
-func (c *ImportConfig) MaxBlockHeight() primitives.BlockHeight {
-	return c.BlockHeight
-}
-
-func Import(logger log.Logger, db *sql.DB, importConfig *ImportConfig, config *BlockPersistenceConfig) (error, int) {
+func Import(logger log.Logger, db *sql.DB, importConfig *config.ImportConfig) (error, int) {
 	_, err := db.Exec("CREATE TABLE IF NOT EXISTS " + importConfig.TableName() + " (blockHeight bigint, timestamp bigint, arguments bytea, txId varchar, newTxId varchar, newTxStatus varchar)")
 	if err != nil {
 		return err, 0
@@ -66,7 +23,7 @@ func Import(logger log.Logger, db *sql.DB, importConfig *ImportConfig, config *B
 	metricFactory := metric.NewRegistry()
 
 	start := time.Now()
-	persistence, err := filesystem.NewBlockPersistence(config, logger, metricFactory)
+	persistence, err := filesystem.NewBlockPersistence(&importConfig.BlockPersistence, logger, metricFactory)
 
 	logger.Info("startup time", log.String("duration", time.Since(start).String()))
 	if err != nil {
