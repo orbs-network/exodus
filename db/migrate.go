@@ -9,17 +9,6 @@ import (
 	"time"
 )
 
-type txIdPair struct {
-	old string
-	new string
-}
-
-type txIdError struct {
-	id          string
-	err         error
-	description string
-}
-
 func Migrate(logger log.Logger, db *sql.DB, contractName string, cfg config.OrbsClientConfig) (error, int) {
 	account, err := cfg.Account()
 	if err != nil {
