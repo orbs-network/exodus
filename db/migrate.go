@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"github.com/orbs-network/exodus/config"
+	"github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/scribe/log"
 	"sync"
@@ -17,7 +18,7 @@ func Migrate(logger log.Logger, db *sql.DB, contractName string, cfg config.Orbs
 
 	client := cfg.Client()
 
-	rows, err := db.Query("SELECT timestamp, methodName, arguments, txId FROM "+contractName+" WHERE newTxStatus = $1 LIMIT $2", "", cfg.TransactionBatchSize)
+	rows, err := db.Query("SELECT timestamp, signer, methodName, arguments, txId FROM "+contractName+" WHERE newTxStatus = $1 LIMIT $2", "", cfg.TransactionBatchSize)
 	if err != nil {
 		return err, 0
 	}
@@ -33,12 +34,15 @@ func Migrate(logger log.Logger, db *sql.DB, contractName string, cfg config.Orbs
 
 		var timestamp uint64
 		var methodName string
+		var signerRaw string
 		var rawArguments []byte
 		var txId string
 
-		if err := rows.Scan(&timestamp, &methodName, &rawArguments, &txId); err != nil {
+		if err := rows.Scan(&timestamp, &signerRaw, &methodName, &rawArguments, &txId); err != nil {
 			return err, 0
 		}
+
+		signer := orbs.AddressToBytes(signerRaw)
 
 		go func(rawArguments []byte, txId string) {
 			defer wg.Done()
@@ -49,7 +53,7 @@ func Migrate(logger log.Logger, db *sql.DB, contractName string, cfg config.Orbs
 				return
 			}
 
-			inputArgumentsWithTimestamp := append([]interface{}{timestamp}, inputArguments...)
+			inputArgumentsWithTimestamp := append([]interface{}{signer, timestamp}, inputArguments...)
 			importMethodName := cfg.ContractImportMethodMapping[methodName]
 			tx, newTxId, err := client.CreateTransaction(account.PublicKey, account.PrivateKey, cfg.ContractName, importMethodName,
 				inputArgumentsWithTimestamp...)

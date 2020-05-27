@@ -32,13 +32,13 @@ func _init() {
 }
 
 func register(hash string, metadata string, secret string) (timestamp uint64, signer []byte, status string) {
-	return _register(env.GetBlockTimestamp(), hash, metadata, secret)
+	return _register(address.GetSignerAddress(), env.GetBlockTimestamp(), hash, metadata, secret)
 }
 
-func _register(ts uint64, hash string, metadata string, secret string) (timestamp uint64, signer []byte, status string) {
+func _register(addr []byte, ts uint64, hash string, metadata string, secret string) (timestamp uint64, signer []byte, status string) {
 	_recordDoesNotExist(hash)
 	timestamp = ts
-	signer = address.GetSignerAddress()
+	signer = addr
 	status = _statusList()[0]
 
 	record := Record{
@@ -162,10 +162,10 @@ func _recordAction(hash string, action string, from string, to string) {
 var DISABLE_IMPORT = []byte("DISABLE_IMPORT")
 var METHODS_FOR_MIGRATION = []interface{}{importData, disableImport}
 
-func importData(ts uint64, hash string, metadata string, secret string) (timestamp uint64, signer []byte, status string) {
+func importData(addr []byte, ts uint64, hash string, metadata string, secret string) (timestamp uint64, signer []byte, status string) {
 	_ownerOnly()
 	_importAllowed()
-	return _register(ts, hash, metadata, secret)
+	return _register(addr, ts, hash, metadata, secret)
 }
 
 func disableImport() {

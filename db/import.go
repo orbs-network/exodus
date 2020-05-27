@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"github.com/orbs-network/crypto-lib-go/crypto/digest"
+	"github.com/orbs-network/crypto-lib-go/crypto/encoding"
 	"github.com/orbs-network/exodus/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/filesystem"
@@ -15,7 +16,7 @@ import (
 )
 
 func Import(logger log.Logger, db *sql.DB, importConfig *config.ImportConfig) (error, int) {
-	_, err := db.Exec("CREATE TABLE IF NOT EXISTS " + importConfig.ContractName + " (blockHeight bigint, timestamp bigint, methodName varchar, arguments bytea, txId varchar, newTxId varchar, newTxStatus varchar)")
+	_, err := db.Exec("CREATE TABLE IF NOT EXISTS " + importConfig.ContractName + " (blockHeight bigint, timestamp bigint, signer varchar, methodName varchar, arguments bytea, txId varchar, newTxId varchar, newTxStatus varchar)")
 	if err != nil {
 		return err, 0
 	}
@@ -59,8 +60,10 @@ func Import(logger log.Logger, db *sql.DB, importConfig *config.ImportConfig) (e
 				}
 
 				if tx.ContractName() == primitives.ContractName(importConfig.ContractName) {
-					_, err := dbTx.Exec("INSERT INTO "+importConfig.ContractName+"(blockHeight, timestamp, methodName, arguments, txId, newTxId, newTxStatus) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-						blockHeight, blockTimestamp, tx.MethodName(), tx.RawInputArgumentArrayWithHeader(), txIdAsString, "", "")
+					signer, _ := digest.CalcClientAddressOfEd25519Signer(tx.Signer())
+
+					_, err := dbTx.Exec("INSERT INTO "+importConfig.ContractName+"(blockHeight, timestamp, signer, methodName, arguments, txId, newTxId, newTxStatus) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+						blockHeight, blockTimestamp, encoding.EncodeHex(signer), tx.MethodName(), tx.RawInputArgumentArrayWithHeader(), txIdAsString, "", "")
 
 					if err != nil {
 						logger.Error("db error", log.Error(err))
