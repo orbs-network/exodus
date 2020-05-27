@@ -1,6 +1,12 @@
 # Exodus
 
-Exodus is a virtual chain migration tool
+Exodus is a virtual chain migration tool.
+
+It imports the block file into a local database, then loops over the table sending new transactions into the vchain. The tool can be stopped in any time and it will pick up where it left off because every transaction status is tracked in the database.
+
+To enable the ability to you migrate the contract's state to a new vchain, you need to adjust your code to support it.
+
+Please refer to [migration guide](MIGRATION-HOWTO.md) for refactoring tips.
 
 ## Running locally
 
