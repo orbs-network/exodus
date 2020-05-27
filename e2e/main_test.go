@@ -62,12 +62,6 @@ func TestE2E(t *testing.T) {
 	err, migratedTxCount := db.Migrate(logger, h.db, tableName, cfg.Orbs)
 	require.NoError(t, err)
 
-	require.EqualValues(t, migratedTxCount, h.dbCountTransactions(t, tableName, "PENDING"))
-	require.EqualValues(t, 0, h.dbCountTransactions(t, tableName, "COMMITTED"))
-
-	err = db.UpdateTxStatus(logger, h.db, tableName, cfg.Orbs)
-	require.NoError(t, err)
-
 	require.EqualValues(t, 0, h.dbCountTransactions(t, tableName, "PENDING"))
 	require.EqualValues(t, migratedTxCount, h.dbCountTransactions(t, tableName, "COMMITTED"))
 }

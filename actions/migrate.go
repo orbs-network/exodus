@@ -19,12 +19,8 @@ func Migrate(logger log.Logger, cfg *config.Config) error {
 
 		if err, count := db.Migrate(logger, postgres, cfg.Import.ContractName, cfg.Orbs); err != nil {
 			return err
-		} else if count == 0 { // FIXME
+		} else if count == 0 {
 			break
-		}
-
-		if err := db.UpdateTxStatus(logger, postgres, cfg.Import.ContractName, cfg.Orbs); err != nil {
-			return err
 		}
 
 		logger.Info("transaction batch processed", log.Stringable("duration", time.Since(start)))

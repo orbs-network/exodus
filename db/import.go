@@ -35,8 +35,10 @@ func Import(logger log.Logger, db *sql.DB, importConfig *config.ImportConfig) (e
 		dbTx, _ := db.Begin()
 
 		wantsMore = true
+		var lastBlockHeight primitives.BlockHeight
 		for _, block := range page {
-			blockHeight := uint64(block.TransactionsBlock.Header.BlockHeight())
+			lastBlockHeight = block.TransactionsBlock.Header.BlockHeight()
+			blockHeight := uint64(lastBlockHeight)
 			blockTimestamp := uint64(block.TransactionsBlock.Header.Timestamp())
 
 			for _, rawTx := range block.TransactionsBlock.SignedTransactions {
@@ -64,7 +66,7 @@ func Import(logger log.Logger, db *sql.DB, importConfig *config.ImportConfig) (e
 				}
 			}
 
-			if importConfig.BlockHeight > 0 && primitives.BlockHeight(blockHeight) == importConfig.BlockHeight {
+			if importConfig.BlockHeight > 0 && lastBlockHeight == importConfig.BlockHeight {
 				wantsMore = false
 				break
 			}
@@ -77,9 +79,9 @@ func Import(logger log.Logger, db *sql.DB, importConfig *config.ImportConfig) (e
 
 		logger.Info("processed block range",
 			log.Uint64("start", uint64(page[0].TransactionsBlock.Header.BlockHeight())),
-			log.Uint64("end", uint64(page[len(page)-1].TransactionsBlock.Header.BlockHeight())))
+			log.Uint64("end", uint64(lastBlockHeight)))
 
-		return true
+		return
 	}); err != nil {
 		return err, 0
 	}

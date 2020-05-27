@@ -68,7 +68,7 @@ func Migrate(logger log.Logger, db *sql.DB, contractName string, cfg config.Orbs
 				logger.Error("failed to create new transaction", log.String("txId", txId))
 				return
 			}
-			res, err := client.SendTransactionAsync(tx)
+			res, err := client.SendTransaction(tx)
 			if err != nil {
 				var description string
 				if res != nil && len(res.OutputArguments) > 0 {
