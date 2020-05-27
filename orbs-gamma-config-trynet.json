@@ -1,0 +1,8 @@
+{
+  "Environments": {
+    "trynet": {
+      "VirtualChain": 7777,
+      "Endpoints": ["http://13.125.39.36/vchains/7777"]
+    }
+  }
+}

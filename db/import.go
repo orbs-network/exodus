@@ -20,6 +20,11 @@ func Import(logger log.Logger, db *sql.DB, importConfig *config.ImportConfig) (e
 		return err, 0
 	}
 
+	_, err = db.Exec("CREATE INDEX IF NOT EXISTS idx_" + importConfig.ContractName + "_txId ON " + importConfig.ContractName + "(txId)")
+	if err != nil {
+		return err, 0
+	}
+
 	metricFactory := metric.NewRegistry()
 
 	start := time.Now()

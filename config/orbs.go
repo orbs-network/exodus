@@ -16,8 +16,7 @@ type OrbsClientConfig struct {
 	ContractName                string
 	ContractImportMethodMapping map[string]string
 
-	TransactionStatusQueryIntervalInMs int
-	TransactionBatchSize               int
+	TransactionBatchSize int
 }
 
 func (c OrbsClientConfig) Account() (*orbs.OrbsAccount, error) {

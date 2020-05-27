@@ -19,11 +19,11 @@ Update `config.json` file with relevant information.
 To import transactions from `blocks` file into a local database, run
 
 ```
-exodus import
+exodus import -config config.json
 ```
 
 To start migration process to a new vchain, run
 
 ```
-exodus migrate
+exodus migrate -config config.json
 ```
