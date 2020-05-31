@@ -33,6 +33,8 @@ func main() {
 			err = actions.Import(logger, cfg)
 		case "migrate":
 			err = actions.Migrate(logger, cfg)
+		case "finish":
+			err = actions.DisableImport(logger, cfg)
 		}
 
 		if err != nil {

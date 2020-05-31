@@ -28,8 +28,14 @@ To import transactions from `blocks` file into a local database, run
 exodus import -config config.json
 ```
 
-To start migration process to a new vchain, run
+To start the migration process to a new vchain, run
 
 ```
 exodus migrate -config config.json
+```
+
+To finish the migration and **completely turn off the ability to import data**, run
+
+```
+exodus finish -config config.json
 ```

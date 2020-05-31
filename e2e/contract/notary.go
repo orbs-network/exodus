@@ -32,6 +32,7 @@ func _init() {
 }
 
 func register(hash string, metadata string, secret string) (timestamp uint64, signer []byte, status string) {
+	_importDisabled()
 	return _register(address.GetSignerAddress(), env.GetBlockTimestamp(), hash, metadata, secret)
 }
 
@@ -176,6 +177,12 @@ func disableImport() {
 func _importAllowed() {
 	if state.ReadBool(DISABLE_IMPORT) {
 		panic("import is not allowed, data migration already finished")
+	}
+}
+
+func _importDisabled() {
+	if !state.ReadBool(DISABLE_IMPORT) {
+		panic("not allowed, data migration in progress")
 	}
 }
 

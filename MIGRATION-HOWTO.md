@@ -95,9 +95,17 @@ func _importAllowed() {
 		panic("import is not allowed, data migration already finished")
 	}
 }
+
+func _importDisabled() {
+	if !state.ReadBool(DISABLE_IMPORT) {
+		panic("not allowed, data migration in progress")
+	}
+}
 ```
 
 `_importAllowed()` will revert every transaction if the import was not allowed (after the migration). The owner of the contract will have to call `disableImport` after all the data has been imported.
+
+`_importDisabled()` will revert every transaction for anyone who tries to `set` anything when migration is in progress, effectively locking out everyone except the owner.
 
 Finally, our new contract will look like this:
 
@@ -112,7 +120,7 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
 )
 
-var PUBLIC = sdk.Export(set, get, importSet)
+var PUBLIC = sdk.Export(set, get, importSet, disableImport)
 var SYSTEM = sdk.Export(_init)
 
 var OWNER_KEY = []byte("owner")
@@ -123,6 +131,7 @@ func _init() {
 }
 
 func set(hash string) {
+    _importDisabled()
 	_set(address.GetSignerAddress(), env.GetBlockTimestamp(), hash)
 }
 
@@ -159,6 +168,12 @@ func disableImport() {
 func _importAllowed() {
 	if state.ReadBool(DISABLE_IMPORT) {
 		panic("import is not allowed, data migration already finished")
+	}
+}
+
+func _importDisabled() {
+	if !state.ReadBool(DISABLE_IMPORT) {
+		panic("not allowed, data migration in progress")
 	}
 }
 ```

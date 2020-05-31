@@ -2,9 +2,13 @@ package e2e
 
 import (
 	"fmt"
+	"github.com/orbs-network/exodus/actions"
 	"github.com/orbs-network/exodus/config"
 	"github.com/orbs-network/exodus/db"
+	"github.com/orbs-network/orbs-client-sdk-go/codec"
+	"github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/scribe/log"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
@@ -61,6 +65,31 @@ func TestE2E(t *testing.T) {
 	err, migratedTxCount := db.Migrate(logger, h.db, tableName, cfg.Orbs)
 	require.NoError(t, err)
 
+	err = sendNotaryTransaction(cfg.Orbs.Client(), cfg.Orbs.ContractName)
+	require.EqualError(t, err, "not allowed, data migration in progress")
+
 	require.EqualValues(t, 0, h.dbCountTransactions(t, tableName, "PENDING"))
 	require.EqualValues(t, migratedTxCount, h.dbCountTransactions(t, tableName, "COMMITTED"))
+
+	err = actions.DisableImport(logger, cfg)
+	require.NoError(t, err)
+
+	err = sendNotaryTransaction(cfg.Orbs.Client(), cfg.Orbs.ContractName)
+	require.NoError(t, err)
+}
+
+func sendNotaryTransaction(client *orbs.OrbsClient, contractName string) error {
+	account, _ := orbs.CreateAccount()
+	tx, _, _ := client.CreateTransaction(account.PublicKey, account.PrivateKey, contractName,
+		"register", time.Now().String(), "", "")
+	res, err := client.SendTransaction(tx)
+	if err != nil {
+		return err
+	}
+
+	if res.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS && res.TransactionStatus == codec.TRANSACTION_STATUS_COMMITTED {
+		return nil
+	}
+
+	return errors.New(res.OutputArguments[0].(string))
 }
