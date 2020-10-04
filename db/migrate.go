@@ -10,6 +10,20 @@ import (
 	"time"
 )
 
+func Status(db *sql.DB, contractName string) (err error, maxProcessedBlockHeight uint64) {
+	rows, err := db.Query("SELECT  MAX(blockheight) FROM "+contractName+" WHERE newTxId != $1", "")
+	if err != nil {
+		return
+	}
+
+	if rows.Next() {
+		err = rows.Scan(&maxProcessedBlockHeight)
+	}
+
+	return
+
+}
+
 func Migrate(logger log.Logger, db *sql.DB, contractName string, cfg config.OrbsClientConfig) (error, int) {
 	account, err := cfg.Account()
 	if err != nil {
@@ -18,7 +32,7 @@ func Migrate(logger log.Logger, db *sql.DB, contractName string, cfg config.Orbs
 
 	client := cfg.Client()
 
-	rows, err := db.Query("SELECT timestamp, signer, methodName, arguments, txId FROM "+contractName+" WHERE newTxStatus = $1 LIMIT $2", "", cfg.TransactionBatchSize)
+	rows, err := db.Query("SELECT timestamp, signer, methodName, arguments, txId FROM "+contractName+" WHERE newTxStatus = $1 ORDER BY blockHeight asc LIMIT $2", "", cfg.TransactionBatchSize)
 	if err != nil {
 		return err, 0
 	}
@@ -88,6 +102,11 @@ func Migrate(logger log.Logger, db *sql.DB, contractName string, cfg config.Orbs
 		return err, 0
 	}
 
-	logger.Info("imported tx set", log.Int("total", count), log.Stringable("duration", time.Since(reqStart)))
+	err, maxProcessedBlockHeight := Status(db, contractName)
+
+	logger.Info("imported tx set", log.Int("total", count),
+		log.Stringable("duration", time.Since(reqStart)),
+		log.Uint64("processedBlockHeight", maxProcessedBlockHeight),
+	)
 	return nil, count
 }
