@@ -1,11 +1,11 @@
 {
   "Orbs": {
-    "Endpoint": "http://localhost:8080",
-    "VirtualChain": 42,
+    "Endpoint": "http://34.255.138.28/vchains/1000002",
+    "VirtualChain": 1000002,
     "PublicKey": "0xb7ef1a3e101322737416db57f7a2cc46dcc3ae171870785ca072755638d2f1ff",
     "PrivateKey": "0x05e98d95c25815274679ff055ae49722cd5e2f888455af392fde2bd3ebdb81b9b7ef1a3e101322737416db57f7a2cc46dcc3ae171870785ca072755638d2f1ff",
-    "ContractName": "NotaryV6",
-    "TransactionBatchSize": 100,
+    "ContractName": "NotaryV1",
+    "TransactionBatchSize": 200,
     "ContractImportMethodMapping": {
       "register": "importData"
     }
