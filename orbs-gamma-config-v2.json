@@ -1,0 +1,8 @@
+{
+  "Environments": {
+    "beta": {
+      "VirtualChain": 1000005,
+      "Endpoints": ["http://0xcore.orbs.com/vchains/1000005"]
+    }
+  }
+}

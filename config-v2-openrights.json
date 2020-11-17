@@ -12,17 +12,17 @@
   },
   "Database": {
     "Database": "exodus",
-    "Host": "localhost",
+    "Host": "127.0.0.1",
     "Port":  5432,
     "User": "username",
     "Password": "password"
   },
   "Import": {
-    "ContractName": "NotaryV1",
+    "ContractName": "OpenRights04",
     "_BlockHeight": 3000,
     "BlockPersistence": {
-      "VirtualChain": 1970000,
-      "Dir": "/Users/kirill/Downloads/197"
+      "VirtualChain": 1960000,
+      "Dir": "/Users/kirill/Downloads/1960000"
     }
   }
 }
