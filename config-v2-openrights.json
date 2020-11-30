@@ -1,5 +1,7 @@
 {
   "Orbs": {
+    "_Endpoint": "http://localhost:8080",
+    "_VirtualChain": 42,
     "Endpoint": "http://0xcore.orbs.com/vchains/1000006",
     "VirtualChain": 1000006,
     "PublicKey": "0xb7ef1a3e101322737416db57f7a2cc46dcc3ae171870785ca072755638d2f1ff",
@@ -7,7 +9,7 @@
     "ContractName": "OpenRights04",
     "TransactionBatchSize": 200,
     "ContractImportMethodMapping": {
-      "register": "importData"
+      "registerMedia": "importData"
     }
   },
   "Database": {
