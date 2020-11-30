@@ -1,0 +1,30 @@
+{
+  "Orbs": {
+    "Endpoint": "http://0xcore.orbs.com/vchains/1000006",
+    "VirtualChain": 1000006,
+    "_Endpoint": "http://localhost:8080",
+    "_VirtualChain": 42,
+    "PublicKey": "0xb7ef1a3e101322737416db57f7a2cc46dcc3ae171870785ca072755638d2f1ff",
+    "PrivateKey": "0x05e98d95c25815274679ff055ae49722cd5e2f888455af392fde2bd3ebdb81b9b7ef1a3e101322737416db57f7a2cc46dcc3ae171870785ca072755638d2f1ff",
+    "ContractName": "NotaryV1",
+    "TransactionBatchSize": 200,
+    "ContractImportMethodMapping": {
+      "register": "importData"
+    }
+  },
+  "Database": {
+    "Database": "exodus",
+    "Host": "127.0.0.1",
+    "Port":  5432,
+    "User": "username",
+    "Password": "password"
+  },
+  "Import": {
+    "ContractName": "NotaryV1",
+    "_BlockHeight": 3000,
+    "BlockPersistence": {
+      "VirtualChain": 1970000,
+      "Dir": "/Users/kirill/Downloads/1970000"
+    }
+  }
+}

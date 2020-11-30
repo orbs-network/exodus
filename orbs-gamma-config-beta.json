@@ -1,8 +1,0 @@
-{
-  "Environments": {
-    "beta": {
-      "VirtualChain": 1000002,
-      "Endpoints": ["http://34.255.138.28/vchains/1000002"]
-    }
-  }
-}
